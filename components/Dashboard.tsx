@@ -60,13 +60,6 @@ const Dashboard: React.FC = () => {
 
   const setDemoData = () => {
     setIsDemoMode(true);
-    setKpis({
-      porCobrar: 47500,
-      proyectosActivos: 3,
-      gastosMes: 12800,
-      retrasosCriticos: 1,
-      stockBajoCount: 4
-    });
   };
 
   useEffect(() => {

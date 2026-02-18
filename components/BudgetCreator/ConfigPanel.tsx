@@ -20,6 +20,41 @@ interface ConfigPanelProps {
     onCalculate: () => void;
 }
 
+/**
+ * Helper: numeric input that shows empty placeholder by default,
+ * allows clearing, and only commits the parsed number on blur.
+ */
+const NumInput: React.FC<{
+    value: number | undefined;
+    onChange: (n: number) => void;
+    step?: string;
+    placeholder?: string;
+    className?: string;
+    min?: number;
+}> = ({ value, onChange, step = '0.01', placeholder = '0', className = '', min }) => {
+    const [localVal, setLocalVal] = React.useState<string>(value != null && value !== 0 ? String(value) : '');
+
+    React.useEffect(() => {
+        setLocalVal(value != null && value !== 0 ? String(value) : '');
+    }, [value]);
+
+    return (
+        <input
+            type="number"
+            step={step}
+            min={min}
+            placeholder={placeholder}
+            className={className}
+            value={localVal}
+            onChange={e => setLocalVal(e.target.value)}
+            onBlur={() => {
+                const parsed = parseFloat(localVal);
+                onChange(isNaN(parsed) ? 0 : parsed);
+            }}
+        />
+    );
+};
+
 export const ConfigPanel: React.FC<ConfigPanelProps> = ({
     tipoTrabajo,
     tipoMeta,
@@ -39,6 +74,8 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
     onCalculate
 }) => {
     const grupo = getGrupo(tipoTrabajo);
+    const inputCls = 'w-full bg-slate-900 rounded-xl h-9 px-3 text-xs text-white';
+    const bigInputCls = 'w-full bg-slate-900 border-none rounded-xl h-12 px-4 text-white font-mono text-xl font-bold';
 
     return (
         <section className="space-y-4">
@@ -59,13 +96,13 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">
                         {grupo === 'lineales' ? 'Longitud (m)' : grupo === 'escaleras' ? 'Ancho Peldaño (m)' : 'Ancho (m)'}
                     </label>
-                    <input type="number" step="0.01" className="w-full bg-slate-900 border-none rounded-xl h-12 px-4 text-white font-mono text-xl font-bold" value={ancho || ''} onChange={e => setAncho(parseFloat(e.target.value) || 0)} />
+                    <NumInput value={ancho} onChange={setAncho} className={bigInputCls} placeholder="0.00" />
                 </div>
                 <div className="bg-card-dark p-4 rounded-3xl border border-white/5">
                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">
                         {grupo === 'techumbres' ? 'Largo/Caída (m)' : 'Alto (m)'}
                     </label>
-                    <input type="number" step="0.01" className="w-full bg-slate-900 border-none rounded-xl h-12 px-4 text-white font-mono text-xl font-bold" value={alto || ''} onChange={e => setAlto(parseFloat(e.target.value) || 0)} />
+                    <NumInput value={alto} onChange={setAlto} className={bigInputCls} placeholder="0.00" />
                 </div>
             </div>
 
@@ -103,22 +140,22 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="text-[8px] font-black text-slate-500 uppercase pl-1">Sep. Barrotes (m)</label>
-                            <input type="number" step="0.01" className="w-full bg-slate-900 rounded-xl h-9 px-3 text-xs text-white" value={config.separacionBarrotes ?? 0.12} onChange={e => updateConfig('separacionBarrotes', parseFloat(e.target.value) || 0)} />
+                            <NumInput value={config.separacionBarrotes ?? 0.12} onChange={v => updateConfig('separacionBarrotes', v)} className={inputCls} placeholder="0.12" />
                         </div>
                         <div>
                             <label className="text-[8px] font-black text-slate-500 uppercase pl-1">Grosor Marco (m)</label>
-                            <input type="number" step="0.001" className="w-full bg-slate-900 rounded-xl h-9 px-3 text-xs text-white" value={config.grosorMarco ?? 0.038} onChange={e => updateConfig('grosorMarco', parseFloat(e.target.value) || 0)} />
+                            <NumInput step="0.001" value={config.grosorMarco ?? 0.038} onChange={v => updateConfig('grosorMarco', v)} className={inputCls} placeholder="0.038" />
                         </div>
                         <div>
                             <label className="text-[8px] font-black text-slate-500 uppercase pl-1">Relleno</label>
-                            <select className="w-full bg-slate-900 rounded-xl h-9 px-3 text-xs text-white" value={config.rellenoTipo ?? 'barrotes'} onChange={e => updateConfig('rellenoTipo', e.target.value as any)}>
+                            <select className={inputCls} value={config.rellenoTipo ?? 'barrotes'} onChange={e => updateConfig('rellenoTipo', e.target.value as any)}>
                                 <option value="barrotes">Barrotes</option>
                                 <option value="lamina">Lámina</option>
                             </select>
                         </div>
                         <div>
                             <label className="text-[8px] font-black text-slate-500 uppercase pl-1">Refuerzos Int.</label>
-                            <input type="number" className="w-full bg-slate-900 rounded-xl h-9 px-3 text-xs text-white" value={config.refuerzosInternos ?? 0} onChange={e => updateConfig('refuerzosInternos', parseInt(e.target.value) || 0)} />
+                            <NumInput step="1" value={config.refuerzosInternos ?? 0} onChange={v => updateConfig('refuerzosInternos', Math.round(v))} className={inputCls} placeholder="0" />
                         </div>
                     </div>
                 )}
@@ -128,11 +165,11 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="text-[8px] font-black text-slate-500 uppercase pl-1">Sep. Postes (m)</label>
-                            <input type="number" step="0.1" className="w-full bg-slate-900 rounded-xl h-9 px-3 text-xs text-white" value={config.separacionPostes ?? 1.5} onChange={e => updateConfig('separacionPostes', parseFloat(e.target.value) || 0)} />
+                            <NumInput step="0.1" value={config.separacionPostes ?? 1.5} onChange={v => updateConfig('separacionPostes', v)} className={inputCls} placeholder="1.5" />
                         </div>
                         <div>
                             <label className="text-[8px] font-black text-slate-500 uppercase pl-1">Líneas Horiz.</label>
-                            <input type="number" className="w-full bg-slate-900 rounded-xl h-9 px-3 text-xs text-white" value={config.lineasHorizontales ?? 3} onChange={e => updateConfig('lineasHorizontales', parseInt(e.target.value) || 0)} />
+                            <NumInput step="1" value={config.lineasHorizontales ?? 3} onChange={v => updateConfig('lineasHorizontales', Math.round(v))} className={inputCls} placeholder="3" />
                         </div>
                     </div>
                 )}
@@ -142,19 +179,19 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="text-[8px] font-black text-slate-500 uppercase pl-1">Sep. Vigas (m)</label>
-                            <input type="number" step="0.5" className="w-full bg-slate-900 rounded-xl h-9 px-3 text-xs text-white" value={config.separacionVigas ?? 3} onChange={e => updateConfig('separacionVigas', parseFloat(e.target.value) || 0)} />
+                            <NumInput step="0.5" value={config.separacionVigas ?? 3} onChange={v => updateConfig('separacionVigas', v)} className={inputCls} placeholder="3" />
                         </div>
                         <div>
                             <label className="text-[8px] font-black text-slate-500 uppercase pl-1">Sep. Montenes (m)</label>
-                            <input type="number" step="0.5" className="w-full bg-slate-900 rounded-xl h-9 px-3 text-xs text-white" value={config.separacionMontenes ?? 1} onChange={e => updateConfig('separacionMontenes', parseFloat(e.target.value) || 0)} />
+                            <NumInput step="0.5" value={config.separacionMontenes ?? 1} onChange={v => updateConfig('separacionMontenes', v)} className={inputCls} placeholder="1" />
                         </div>
                         <div>
                             <label className="text-[8px] font-black text-slate-500 uppercase pl-1">Vuelo/Alero (m)</label>
-                            <input type="number" step="0.05" className="w-full bg-slate-900 rounded-xl h-9 px-3 text-xs text-white" value={config.vueloTecho ?? 0.3} onChange={e => updateConfig('vueloTecho', parseFloat(e.target.value) || 0)} />
+                            <NumInput step="0.05" value={config.vueloTecho ?? 0.3} onChange={v => updateConfig('vueloTecho', v)} className={inputCls} placeholder="0.3" />
                         </div>
                         <div>
                             <label className="text-[8px] font-black text-slate-500 uppercase pl-1">Largo Lámina (m)</label>
-                            <input type="number" step="0.01" className="w-full bg-slate-900 rounded-xl h-9 px-3 text-xs text-white" value={config.largoLamina ?? 3.66} onChange={e => updateConfig('largoLamina', parseFloat(e.target.value) || 0)} />
+                            <NumInput value={config.largoLamina ?? 3.66} onChange={v => updateConfig('largoLamina', v)} className={inputCls} placeholder="3.66" />
                         </div>
                     </div>
                 )}
@@ -164,11 +201,11 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="text-[8px] font-black text-slate-500 uppercase pl-1">Altura Paso (m)</label>
-                            <input type="number" step="0.01" className="w-full bg-slate-900 rounded-xl h-9 px-3 text-xs text-white" value={config.alturaPaso ?? 0.18} onChange={e => updateConfig('alturaPaso', parseFloat(e.target.value) || 0)} />
+                            <NumInput value={config.alturaPaso ?? 0.18} onChange={v => updateConfig('alturaPaso', v)} className={inputCls} placeholder="0.18" />
                         </div>
                         <div>
                             <label className="text-[8px] font-black text-slate-500 uppercase pl-1">Huella (m)</label>
-                            <input type="number" step="0.01" className="w-full bg-slate-900 rounded-xl h-9 px-3 text-xs text-white" value={config.huellaEscalon ?? 0.28} onChange={e => updateConfig('huellaEscalon', parseFloat(e.target.value) || 0)} />
+                            <NumInput value={config.huellaEscalon ?? 0.28} onChange={v => updateConfig('huellaEscalon', v)} className={inputCls} placeholder="0.28" />
                         </div>
                     </div>
                 )}

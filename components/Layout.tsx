@@ -24,10 +24,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="size-10 rounded-full bg-primary/20 border-2 border-primary overflow-hidden">
-              <img 
-                alt="User profile" 
-                className="w-full h-full object-cover" 
-                src="https://picsum.photos/seed/sahel/100/100" 
+              <img
+                alt="User profile"
+                className="w-full h-full object-cover"
+                src="https://picsum.photos/seed/sahel/100/100"
               />
             </div>
             <div className="absolute bottom-0 right-0 size-3 bg-green-500 border-2 border-background-dark rounded-full"></div>
@@ -37,9 +37,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <h1 className="text-lg font-bold leading-none">Hola, Sahel</h1>
           </div>
         </div>
-        <button className="relative p-2 rounded-lg bg-card-dark border border-slate-700">
+        <button
+          onClick={() => alert('Sin notificaciones nuevas')}
+          className="relative p-2 rounded-lg bg-card-dark border border-slate-700 active:scale-90 transition-all"
+          title="Notificaciones"
+        >
           <span className="material-symbols-outlined text-slate-300">notifications</span>
-          <span className="absolute top-1.5 right-1.5 size-2 bg-safety-orange rounded-full"></span>
         </button>
       </header>
 
@@ -57,12 +60,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <Link
                 key={item.id}
                 to={item.path}
-                className={`flex flex-col items-center gap-1 group px-3 py-1 rounded-xl transition-all ${
-                  isActive ? 'text-primary' : 'text-slate-500'
-                }`}
+                className={`flex flex-col items-center gap-1 group px-3 py-1 rounded-xl transition-all ${isActive ? 'text-primary' : 'text-slate-500'
+                  }`}
               >
-                <span className={`material-symbols-outlined text-[26px] ${isActive ? 'fill-1' : ''}`} 
-                      style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}>
+                <span className={`material-symbols-outlined text-[26px] ${isActive ? 'fill-1' : ''}`}
+                  style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}>
                   {item.icon}
                 </span>
                 <span className="text-[10px] font-black uppercase tracking-tight">{item.label}</span>

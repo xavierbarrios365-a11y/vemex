@@ -1,19 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { API_URL } from '../constants';
 
+interface Project {
+  id: string;
+  name: string;
+  client: string;
+  status: string;
+  type: string;
+}
+
+const TIPOS_PROYECTO = ['HERRERÍA', 'CERRAMIENTO', 'TECHUMBRE', 'ESCALERA', 'ESTRUCTURA', 'OTRO'];
+
 const Kanban: React.FC = () => {
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-
-  const setDemoProjects = () => {
-    setProjects([
-      { id: 'P-001', name: 'Portón Residencial Lomas', client: 'Arq. Martínez', status: 'En Producción', type: 'HERRERÍA' },
-      { id: 'P-002', name: 'Reja Perimetral Nave 3', client: 'Industrial del Norte', status: 'Por Cotizar', type: 'CERRAMIENTO' },
-      { id: 'P-003', name: 'Techo Estacionamiento', client: 'Plaza Comercial', status: 'En Producción', type: 'TECHUMBRE' },
-      { id: 'P-004', name: 'Escalera Caracol Oficinas', client: 'Despacho Luna', status: 'Terminado', type: 'ESCALERA' },
-    ]);
-  };
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [newProject, setNewProject] = useState({
+    nombre: '',
+    tipo: 'HERRERÍA',
+    clienteId: '',
+    fechaEntrega: ''
+  });
 
   const cargarProyectos = async () => {
     setLoading(true);
@@ -22,29 +31,22 @@ const Kanban: React.FC = () => {
     if (gContext && gContext.script && gContext.script.run) {
       gContext.script.run
         .withSuccessHandler((data: any) => {
-          if (Array.isArray(data) && data.length > 0) setProjects(data);
-          else setDemoProjects();
+          if (Array.isArray(data)) setProjects(data);
           setLoading(false);
         })
         .withFailureHandler(() => {
-          setDemoProjects();
           setLoading(false);
         })
         .getDataProyectos();
       return;
     }
 
-    // HTTP fallback
     try {
       const response = await fetch(`${API_URL}?action=getProyectos`);
       const data = await response.json();
-      if (Array.isArray(data) && data.length > 0) {
-        setProjects(data);
-      } else {
-        setDemoProjects();
-      }
+      if (Array.isArray(data)) setProjects(data);
     } catch {
-      setDemoProjects();
+      // No connection — projects stay empty
     } finally {
       setLoading(false);
     }
@@ -61,13 +63,11 @@ const Kanban: React.FC = () => {
           cargarProyectos();
         })
         .withFailureHandler(() => {
-          // Fallback: update locally
           setProjects(prev => prev.map(p => p.id === id ? { ...p, status: nuevoEstatus } : p));
           setUpdatingId(null);
         })
         .actualizarEstatusProyecto({ id, nuevoEstatus });
     } else {
-      // HTTP fallback
       try {
         await fetch(API_URL, {
           method: 'POST',
@@ -79,6 +79,57 @@ const Kanban: React.FC = () => {
         setProjects(prev => prev.map(p => p.id === id ? { ...p, status: nuevoEstatus } : p));
       }
       setUpdatingId(null);
+    }
+  };
+
+  const crearProyecto = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProject.nombre.trim()) return;
+    setIsSaving(true);
+
+    const data = { ...newProject };
+
+    // @ts-ignore
+    const gContext = window.google;
+    if (gContext && gContext.script && gContext.script.run) {
+      gContext.script.run
+        .withSuccessHandler(() => {
+          setIsSaving(false);
+          setShowNewModal(false);
+          setNewProject({ nombre: '', tipo: 'HERRERÍA', clienteId: '', fechaEntrega: '' });
+          cargarProyectos();
+        })
+        .withFailureHandler(() => {
+          setIsSaving(false);
+          alert('Error al crear proyecto');
+        })
+        .agregarNuevoProyecto(data);
+    } else {
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'agregarNuevoProyecto', data }),
+        });
+        const result = await response.json();
+        if (result.success) {
+          setShowNewModal(false);
+          setNewProject({ nombre: '', tipo: 'HERRERÍA', clienteId: '', fechaEntrega: '' });
+          cargarProyectos();
+        }
+      } catch {
+        // Local fallback: add to state directly
+        setProjects(prev => [...prev, {
+          id: 'PRY-' + Date.now(),
+          name: data.nombre,
+          client: data.clienteId || 'Sin cliente',
+          status: 'Por Cotizar',
+          type: data.tipo
+        }]);
+        setShowNewModal(false);
+        setNewProject({ nombre: '', tipo: 'HERRERÍA', clienteId: '', fechaEntrega: '' });
+      }
+      setIsSaving(false);
     }
   };
 
@@ -172,11 +223,83 @@ const Kanban: React.FC = () => {
         ))}
       </div>
 
+      {/* FAB — New Project */}
       <div className="fixed bottom-24 right-4 z-40">
-        <button className="size-16 rounded-2xl bg-safety-orange text-white shadow-2xl flex items-center justify-center border-4 border-background-dark active:scale-95 transition-all">
+        <button
+          onClick={() => setShowNewModal(true)}
+          className="size-16 rounded-2xl bg-safety-orange text-white shadow-2xl flex items-center justify-center border-4 border-background-dark active:scale-95 transition-all"
+        >
           <span className="material-symbols-outlined text-3xl">add_task</span>
         </button>
       </div>
+
+      {/* New Project Modal */}
+      {showNewModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-background-dark/90 backdrop-blur-md" onClick={() => setShowNewModal(false)}></div>
+          <div className="relative w-full max-w-md bg-card-dark rounded-3xl p-8 border border-white/10 shadow-2xl">
+            <h2 className="text-xl font-black text-white mb-6 italic">NUEVO PROYECTO</h2>
+            <form onSubmit={crearProyecto} className="space-y-4">
+              <div>
+                <label className="text-[8px] font-black text-slate-500 uppercase pl-1 block mb-1">Nombre del Proyecto *</label>
+                <input
+                  required
+                  placeholder="Ej: Portón Residencial Lomas"
+                  className="w-full h-14 bg-slate-900 border-white/5 border rounded-xl px-4 text-white"
+                  value={newProject.nombre}
+                  onChange={e => setNewProject({ ...newProject, nombre: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[8px] font-black text-slate-500 uppercase pl-1 block mb-1">Tipo</label>
+                  <select
+                    className="w-full h-14 bg-slate-900 border-white/5 border rounded-xl px-4 text-white font-bold"
+                    value={newProject.tipo}
+                    onChange={e => setNewProject({ ...newProject, tipo: e.target.value })}
+                  >
+                    {TIPOS_PROYECTO.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[8px] font-black text-slate-500 uppercase pl-1 block mb-1">Fecha Entrega</label>
+                  <input
+                    type="date"
+                    className="w-full h-14 bg-slate-900 border-white/5 border rounded-xl px-4 text-white"
+                    value={newProject.fechaEntrega}
+                    onChange={e => setNewProject({ ...newProject, fechaEntrega: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[8px] font-black text-slate-500 uppercase pl-1 block mb-1">ID Cliente (opcional)</label>
+                <input
+                  placeholder="Ej: CLI-001"
+                  className="w-full h-14 bg-slate-900 border-white/5 border rounded-xl px-4 text-white"
+                  value={newProject.clienteId}
+                  onChange={e => setNewProject({ ...newProject, clienteId: e.target.value })}
+                />
+              </div>
+              <div className="flex gap-4 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowNewModal(false)}
+                  className="flex-1 py-5 border border-white/10 rounded-2xl font-black uppercase text-sm tracking-widest text-slate-400 hover:text-white transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex-1 py-5 bg-safety-orange hover:bg-safety-orange/90 rounded-2xl font-black uppercase text-sm tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3 text-white"
+                >
+                  {isSaving ? <div className="size-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : 'CREAR'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

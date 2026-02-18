@@ -31,8 +31,10 @@ function doPost(e) {
     switch (action) {
       case 'agregarNuevoMaterial': result = agregarNuevoMaterial(data); break;
       case 'actualizarMaterial': result = actualizarMaterial(data); break;
+      case 'eliminarMaterial': result = eliminarMaterial(data); break;
       case 'registrarMovimiento': result = registrarMovimiento(data); break;
       case 'actualizarEstatusProyecto': result = actualizarEstatusProyecto(data); break;
+      case 'agregarNuevoProyecto': result = agregarNuevoProyecto(data); break;
       case 'guardarCotizacion': result = guardarCotizacionCompleta(data); break;
       default: result = { success: false, message: 'Acción desconocida: ' + action };
     }
@@ -176,4 +178,31 @@ function agregarNuevoMaterial(data) {
   const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName("BD_MATERIALES");
   sheet.appendRow(["MAT-" + Date.now(), data.nombre, data.categoria, data.unidad, data.precio, 5, data.stock]);
   return { success: true };
+}
+
+function eliminarMaterial(data) {
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName("BD_MATERIALES");
+  const vals = sheet.getDataRange().getValues();
+  for (let i = 1; i < vals.length; i++) {
+    if (vals[i][0].toString() === data.id.toString()) {
+      sheet.deleteRow(i + 1);
+      return { success: true };
+    }
+  }
+  return { success: false, message: 'Material no encontrado' };
+}
+
+function agregarNuevoProyecto(data) {
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName("BD_PROYECTOS");
+  const id = "PRY-" + Date.now();
+  sheet.appendRow([
+    id,
+    data.clienteId || "VAR-001",
+    data.nombre,
+    new Date(),
+    data.fechaEntrega ? new Date(data.fechaEntrega) : "",
+    data.estatus || "Por Cotizar",
+    data.tipo || "METAL"
+  ]);
+  return { success: true, id: id };
 }

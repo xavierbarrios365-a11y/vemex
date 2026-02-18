@@ -123,11 +123,14 @@ export const ResultView: React.FC<ResultViewProps> = ({
                                         <input
                                             type="number"
                                             className={`w-full bg-white border rounded-xl h-9 pl-4 pr-2 text-[10px] font-black outline-none transition-colors ${asignado?.manualPrice !== undefined ? 'border-primary text-primary' : 'border-slate-200 text-slate-600'}`}
-                                            value={asignado?.manualPrice !== undefined ? asignado.manualPrice : (mat?.priceBase || '')}
+                                            defaultValue={asignado?.manualPrice !== undefined ? asignado.manualPrice : (mat?.priceBase || '')}
+                                            key={`${idx}-${asignado?.materialId}-${asignado?.manualPrice === undefined ? 'auto' : 'manual'}`}
                                             placeholder="Precio"
-                                            onChange={e => {
+                                            onBlur={e => {
+                                                const val = e.target.value;
+                                                if (val === '' || val === null) return;
                                                 const next = [...assignments];
-                                                next[idx] = { ...next[idx], manualPrice: parseFloat(e.target.value) || 0 };
+                                                next[idx] = { ...next[idx], manualPrice: parseFloat(val) || 0 };
                                                 setAssignments(next);
                                             }}
                                         />

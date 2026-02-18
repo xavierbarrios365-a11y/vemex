@@ -31,14 +31,7 @@ const Inventory: React.FC = () => {
   });
 
   const setDemoMaterials = () => {
-    setMaterials([
-      { id: 'MAT-001', name: 'PTR 2" Cal 14', category: 'perfil', unit: 'Tramo 6m', price: 700, stockVal: 25, stockMin: 5, stock: 'high', image: 'https://picsum.photos/seed/ptr2/200/200' },
-      { id: 'MAT-002', name: 'PTR 1 1/2" Cal 14', category: 'perfil', unit: 'Tramo 6m', price: 550, stockVal: 3, stockMin: 5, stock: 'low', image: 'https://picsum.photos/seed/ptr15/200/200' },
-      { id: 'MAT-003', name: 'Tubo 1" Céd 30', category: 'tubo', unit: 'Tramo 6m', price: 370, stockVal: 18, stockMin: 5, stock: 'high', image: 'https://picsum.photos/seed/tubo1/200/200' },
-      { id: 'MAT-004', name: 'Lámina R-101 Galv.', category: 'lamina', unit: 'Pza', price: 520, stockVal: 12, stockMin: 5, stock: 'high', image: 'https://picsum.photos/seed/lamina/200/200' },
-      { id: 'MAT-005', name: 'Disco de Corte 4.5"', category: 'consumible', unit: 'Pza', price: 28, stockVal: 2, stockMin: 10, stock: 'low', image: 'https://picsum.photos/seed/disco/200/200' },
-      { id: 'MAT-006', name: 'Electrodo 6013 1/8"', category: 'consumible', unit: 'Kg', price: 125, stockVal: 0, stockMin: 5, stock: 'none', image: 'https://picsum.photos/seed/electrodo/200/200' },
-    ]);
+    setMaterials([]);
   };
 
   const cargarInventario = async () => {
@@ -146,6 +139,32 @@ const Inventory: React.FC = () => {
     }
   };
 
+  const eliminarMaterial = async (item: InventoryItem) => {
+    if (!confirm(`¿Eliminar "${item.name}"? Esta acción no se puede deshacer.`)) return;
+
+    // @ts-ignore
+    const gContext = window.google;
+    if (gContext && gContext.script && gContext.script.run) {
+      gContext.script.run
+        .withSuccessHandler(() => cargarInventario())
+        .withFailureHandler(() => {
+          setMaterials(prev => prev.filter(m => m.id !== item.id));
+        })
+        .eliminarMaterial({ id: item.id });
+    } else {
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'eliminarMaterial', data: { id: item.id } }),
+        });
+        cargarInventario();
+      } catch {
+        setMaterials(prev => prev.filter(m => m.id !== item.id));
+      }
+    }
+  };
+
   const filteredMaterials = materials.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
@@ -187,10 +206,15 @@ const Inventory: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-3">
-              <button onClick={() => abrirModal(item)} className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-all">
-                <span className="material-symbols-outlined text-lg">edit</span>
-              </button>
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex gap-1">
+                <button onClick={() => abrirModal(item)} className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-all active:scale-90" title="Editar">
+                  <span className="material-symbols-outlined text-lg">edit</span>
+                </button>
+                <button onClick={() => eliminarMaterial(item)} className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-danger-red transition-all active:scale-90" title="Eliminar">
+                  <span className="material-symbols-outlined text-lg">delete</span>
+                </button>
+              </div>
               <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md ${item.stock === 'high' ? 'bg-green-500/10' : item.stock === 'none' ? 'bg-red-500/10' : 'bg-yellow-500/10'
                 }`}>
                 <span className={`text-[9px] font-black uppercase ${item.stock === 'high' ? 'text-green-500' : item.stock === 'none' ? 'text-red-500' : 'text-yellow-500'
