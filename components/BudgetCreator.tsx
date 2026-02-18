@@ -40,7 +40,7 @@ const BudgetCreator: React.FC = () => {
   const [clienteNombre, setClienteNombre] = useState('');
   const [clienteEmpresa, setClienteEmpresa] = useState('');
   const [proyectoUbicacion, setProyectoUbicacion] = useState('');
-  const [folio] = useState(() => `COT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [folio, setFolio] = useState(() => `BORRADOR-${Math.floor(1000 + Math.random() * 9000)}`);
 
   // Assignments & Extras
   const [assignments, setAssignments] = useState<MaterialAssignment[]>([]);
@@ -221,10 +221,12 @@ const BudgetCreator: React.FC = () => {
       gContext.script.run
         .withSuccessHandler((resp: any) => {
           setLoading(false);
-          setStatusMessage(resp.success
-            ? { text: `✓ Orden guardada: ${resp.id}`, type: 'success' }
-            : { text: resp.message || 'Error al guardar', type: 'error' }
-          );
+          if (resp.success && resp.id) {
+            setFolio(resp.id);
+            setStatusMessage({ text: `✓ Orden guardada: ${resp.id}`, type: 'success' });
+          } else {
+            setStatusMessage({ text: resp.message || 'Error al guardar', type: 'error' });
+          }
         })
         .withFailureHandler((err: any) => {
           setLoading(false);
@@ -243,6 +245,7 @@ const BudgetCreator: React.FC = () => {
       const result = await response.json();
       setLoading(false);
       if (result.success) {
+        if (result.id) setFolio(result.id);
         setStatusMessage({ text: `✓ Orden guardada: ${result.id}`, type: 'success' });
       } else {
         setStatusMessage({ text: result.message || 'Error del servidor', type: 'error' });
