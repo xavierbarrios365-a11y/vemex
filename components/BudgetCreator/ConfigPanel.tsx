@@ -18,6 +18,8 @@ interface ConfigPanelProps {
     setProyectoUbicacion: (val: string) => void;
     updateConfig: <K extends keyof ConfigCalculo>(key: K, val: ConfigCalculo[K]) => void;
     onCalculate: () => void;
+    onSyncPrices: () => void;
+    isSyncing: boolean;
 }
 
 /**
@@ -71,7 +73,9 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
     proyectoUbicacion,
     setProyectoUbicacion,
     updateConfig,
-    onCalculate
+    onCalculate,
+    onSyncPrices,
+    isSyncing
 }) => {
     const grupo = getGrupo(tipoTrabajo);
     const inputCls = 'w-full bg-slate-900 rounded-xl h-9 px-3 text-xs text-white';
@@ -130,10 +134,20 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
 
             {/* Parámetros Específicos del Grupo */}
             <div className="bg-card-dark p-5 rounded-3xl border border-white/5 space-y-4">
-                <h4 className="text-[9px] font-black uppercase tracking-widest italic" style={{ color: grupoColor }}>
-                    <span className="material-symbols-outlined text-sm align-middle mr-1">tune</span>
-                    Parámetros de Ingeniería
-                </h4>
+                <div className="flex items-center justify-between">
+                    <h4 className="text-[9px] font-black uppercase tracking-widest italic" style={{ color: grupoColor }}>
+                        <span className="material-symbols-outlined text-sm align-middle mr-1">tune</span>
+                        Parámetros de Ingeniería
+                    </h4>
+                    <button
+                        onClick={onSyncPrices}
+                        disabled={isSyncing}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-white/5 border border-white/5 rounded-lg text-[8px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all active:scale-95 disabled:opacity-30"
+                    >
+                        <span className={`material-symbols-outlined text-[10px] ${isSyncing ? 'animate-spin' : ''}`}>sync</span>
+                        {isSyncing ? 'Sincronizando...' : 'Sincronizar Catálogo'}
+                    </button>
+                </div>
 
                 {/* CERRAMIENTOS */}
                 {grupo === 'cerramientos' && (

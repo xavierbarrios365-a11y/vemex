@@ -1,13 +1,62 @@
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { apiGet } from '../constants';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
+const PAGE_META: Record<string, { title: string; subtitle: string }> = {
+  '/': { title: 'Resumen', subtitle: 'Panel de Control' },
+  '/budget': { title: 'Ingeniería', subtitle: 'Cotizaciones y Presupuestos' },
+  '/projects': { title: 'Taller', subtitle: 'Gestión de Proyectos' },
+  '/inventory': { title: 'Almacén', subtitle: 'Control de Inventario' },
+  '/finance': { title: 'Finanzas', subtitle: 'Ingresos y Egresos' },
+};
+
+interface Notif {
+  id: string;
+  icon: string;
+  text: string;
+  severity: 'danger' | 'warning' | 'info';
+  path: string;
+}
+
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
+  const meta = PAGE_META[location.pathname] || PAGE_META['/'];
+  const [showNotifs, setShowNotifs] = useState(false);
+  const [notifs, setNotifs] = useState<Notif[]>([]);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch(apiGet('getKPIs'));
+        const d = await res.json();
+        if (d && !d.error) {
+          const list: Notif[] = [];
+          if (d.retrasosCriticos > 0) list.push({ id: 'r', icon: 'schedule', text: `${d.retrasosCriticos} proyecto(s) con entrega vencida`, severity: 'danger', path: '/projects' });
+          if (d.stockBajoCount > 0) list.push({ id: 's', icon: 'package_2', text: `${d.stockBajoCount} material(es) en stock crítico`, severity: 'warning', path: '/inventory' });
+          if (d.cotizacionesActivas > 0) list.push({ id: 'c', icon: 'description', text: `${d.cotizacionesActivas} cotización(es) pendiente(s)`, severity: 'info', path: '/budget' });
+          setNotifs(list);
+        }
+      } catch { }
+    };
+    load();
+  }, [location.pathname]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setShowNotifs(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const sevColors = { danger: 'text-danger-red bg-danger-red/10', warning: 'text-safety-orange bg-safety-orange/10', info: 'text-primary bg-primary/10' };
 
   const navItems = [
     { id: 'dashboard', path: '/', label: 'Inicio', icon: 'home' },
@@ -26,17 +75,53 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <span className="material-symbols-outlined text-primary">dashboard</span>
           </div>
           <div>
-            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Vemex Industrial Systems</p>
-            <h1 className="text-lg font-bold leading-none">Resumen</h1>
+            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{meta.subtitle}</p>
+            <h1 className="text-lg font-bold leading-none">{meta.title}</h1>
           </div>
         </div>
-        <button
-          onClick={() => alert('Sin notificaciones nuevas')}
-          className="relative p-2 rounded-lg bg-card-dark border border-slate-700 active:scale-90 transition-all"
-          title="Notificaciones"
-        >
-          <span className="material-symbols-outlined text-slate-300">notifications</span>
-        </button>
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setShowNotifs(!showNotifs)}
+            className="relative p-2 rounded-lg bg-card-dark border border-slate-700 active:scale-90 transition-all"
+            title="Notificaciones"
+          >
+            <span className="material-symbols-outlined text-slate-300">notifications</span>
+            {notifs.length > 0 && (
+              <span className="absolute -top-1 -right-1 size-4 bg-danger-red rounded-full text-[8px] font-black flex items-center justify-center text-white animate-pulse">
+                {notifs.length}
+              </span>
+            )}
+          </button>
+          {showNotifs && (
+            <div className="absolute right-0 top-12 w-72 bg-card-dark border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[100]">
+              <div className="px-4 py-3 border-b border-white/5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Alertas Activas</p>
+              </div>
+              {notifs.length === 0 ? (
+                <div className="p-6 text-center">
+                  <span className="material-symbols-outlined text-3xl text-slate-700 mb-2">check_circle</span>
+                  <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Todo en orden</p>
+                </div>
+              ) : (
+                <div className="max-h-60 overflow-y-auto">
+                  {notifs.map(n => (
+                    <Link
+                      key={n.id}
+                      to={n.path}
+                      onClick={() => setShowNotifs(false)}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all"
+                    >
+                      <div className={`size-9 rounded-xl flex items-center justify-center shrink-0 ${sevColors[n.severity]}`}>
+                        <span className="material-symbols-outlined text-sm">{n.icon}</span>
+                      </div>
+                      <p className="text-xs text-slate-300 font-medium">{n.text}</p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </header>
 
       {/* Main Content */}

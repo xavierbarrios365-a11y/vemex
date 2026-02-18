@@ -51,6 +51,31 @@ const Finance: React.FC = () => {
     fetchData();
   }, []);
 
+  const eliminarMovimiento = async (id: string, desc: string) => {
+    if (!confirm(`¿Eliminar movimiento "${desc}"?\nEsta acción no se puede deshacer.`)) return;
+    // @ts-ignore
+    const gContext = window.google;
+    if (gContext && gContext.script && gContext.script.run) {
+      gContext.script.run
+        .withSuccessHandler(() => fetchData())
+        .withFailureHandler(() => alert('Error al eliminar'))
+        .eliminarMovimiento({ id });
+    } else {
+      try {
+        const response = await fetch(apiGet(''), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: apiPostBody('eliminarMovimiento', { id }),
+        });
+        const result = await response.json();
+        if (result.success) fetchData();
+        else alert(result.message || 'Error');
+      } catch {
+        alert('Sin conexión');
+      }
+    }
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.monto || !formData.concepto) return;
@@ -248,9 +273,18 @@ const Finance: React.FC = () => {
                         <p className="text-[9px] font-bold text-slate-500 uppercase">{move.category || 'General'}</p>
                       </div>
                     </div>
-                    <span className={`${move.type === 'income' ? 'text-green-500' : 'text-danger-red'} text-xs font-black font-mono`}>
-                      {move.type === 'income' ? '+' : '-'}${Number(move.amount).toLocaleString()}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`${move.type === 'income' ? 'text-green-500' : 'text-danger-red'} text-xs font-black font-mono`}>
+                        {move.type === 'income' ? '+' : '-'}${Number(move.amount).toLocaleString()}
+                      </span>
+                      <button
+                        onClick={() => eliminarMovimiento(move.id, move.description)}
+                        className="size-8 rounded-lg text-slate-700 hover:text-danger-red hover:bg-danger-red/10 flex items-center justify-center transition-all active:scale-90"
+                        title="Eliminar movimiento"
+                      >
+                        <span className="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    </div>
                   </div>
                 ))
               ) : (

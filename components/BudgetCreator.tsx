@@ -49,8 +49,30 @@ const BudgetCreator: React.FC = () => {
   const [manoObraFactor, setManoObraFactor] = useState(0.45);
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' | 'none' }>({ text: '', type: 'none' });
+  const [syncedPrices, setSyncedPrices] = useState<Record<string, number>>({});
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  const materials: UniversalMaterial[] = useMemo(() => MATERIAL_DATABASE, []);
+  // Unsaved changes check
+  const hasUnsavedChanges = step !== 'tipo' && view === 'create';
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  const materials: UniversalMaterial[] = useMemo(() => {
+    if (Object.keys(syncedPrices).length === 0) return MATERIAL_DATABASE;
+    return MATERIAL_DATABASE.map(m => ({
+      ...m,
+      priceBase: syncedPrices[m.id] || m.priceBase
+    }));
+  }, [syncedPrices]);
 
   // ─── FETCH QUOTES ──────────────────────────────────────────────
   const fetchQuotes = async () => {
@@ -128,8 +150,31 @@ const BudgetCreator: React.FC = () => {
   };
 
   const backToList = () => {
+    if (hasUnsavedChanges) {
+      if (!confirm('¿Salir sin guardar? Se perderán los cambios de esta cotización.')) return;
+    }
     setView('list');
     fetchQuotes();
+  };
+
+  const syncPrices = async () => {
+    setIsSyncing(true);
+    try {
+      const response = await fetch(apiGet('getMateriales'));
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        const priceMap: Record<string, number> = {};
+        data.forEach((m: any) => {
+          if (m.id) priceMap[m.id] = Number(m.price) || 0;
+        });
+        setSyncedPrices(priceMap);
+        setStatusMessage({ text: '✓ Precios sincronizados con Google Sheet', type: 'success' });
+      }
+    } catch {
+      setStatusMessage({ text: 'Error al sincronizar precios', type: 'error' });
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const selectTipo = (tipo: TipoTrabajo) => {
@@ -467,6 +512,8 @@ const BudgetCreator: React.FC = () => {
           setProyectoUbicacion={setProyectoUbicacion}
           updateConfig={updateConfig}
           onCalculate={() => setStep('resultado')}
+          onSyncPrices={syncPrices}
+          isSyncing={isSyncing}
         />
       )}
 

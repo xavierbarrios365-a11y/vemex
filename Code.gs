@@ -127,6 +127,7 @@ function doPost(e) {
       case 'guardarCotizacion': result = guardarCotizacionCompleta(data); break;
       case 'actualizarEstatusCotizacion': result = actualizarEstatusCotizacion(data); break;
       case 'eliminarCotizacion': result = eliminarCotizacion(data); break;
+      case 'eliminarMovimiento': result = eliminarMovimiento(data); break;
       default: result = { success: false, message: 'Acción desconocida: ' + action };
     }
     return jsonResp(result);
@@ -482,5 +483,24 @@ function eliminarCotizacion(data) {
       }
     }
     return { success: false, message: 'Cotización no encontrada' };
+  });
+}
+
+function eliminarMovimiento(data) {
+  var err = validar(data, [
+    { campo: 'id', requerido: true, tipo: 'texto' }
+  ]);
+  if (err) return { success: false, message: err };
+
+  return conLock(function() {
+    var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName("BD_FINANZAS");
+    var vals = sheet.getDataRange().getValues();
+    for (var i = 1; i < vals.length; i++) {
+      if (vals[i][0].toString() === data.id.toString()) {
+        sheet.deleteRow(i + 1);
+        return { success: true };
+      }
+    }
+    return { success: false, message: 'Movimiento no encontrado' };
   });
 }
