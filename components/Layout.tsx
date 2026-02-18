@@ -22,19 +22,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background-dark/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="size-10 rounded-full bg-primary/20 border-2 border-primary overflow-hidden">
-              <img
-                alt="User profile"
-                className="w-full h-full object-cover"
-                src="https://picsum.photos/seed/sahel/100/100"
-              />
-            </div>
-            <div className="absolute bottom-0 right-0 size-3 bg-green-500 border-2 border-background-dark rounded-full"></div>
+          <div className="size-10 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center">
+            <span className="material-symbols-outlined text-primary">dashboard</span>
           </div>
           <div>
             <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Vemex Industrial Systems</p>
-            <h1 className="text-lg font-bold leading-none">Hola, Sahel</h1>
+            <h1 className="text-lg font-bold leading-none">Resumen</h1>
           </div>
         </div>
         <button
