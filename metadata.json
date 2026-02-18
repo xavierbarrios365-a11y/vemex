@@ -1,0 +1,7 @@
+{
+  "name": "Cotizacion Vemex",
+  "description": "A comprehensive workshop management system for industrial metalwork, featuring real-time project tracking, inventory management, automated budgeting, and financial analytics.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
