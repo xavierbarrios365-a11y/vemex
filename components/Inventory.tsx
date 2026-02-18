@@ -17,6 +17,7 @@ const Inventory: React.FC = () => {
   const [materials, setMaterials] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('todos');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -165,7 +166,19 @@ const Inventory: React.FC = () => {
     }
   };
 
-  const filteredMaterials = materials.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const CATEGORIES = [
+    { id: 'todos', label: 'Todos', icon: 'apps' },
+    { id: 'perfiles', label: 'Perfiles', icon: 'straighten' },
+    { id: 'l\u00e1minas', label: 'L\u00e1minas', icon: 'layers' },
+    { id: 'consumibles', label: 'Consumibles', icon: 'bolt' },
+    { id: 'otros', label: 'Otros', icon: 'category' },
+  ];
+
+  const filteredMaterials = materials.filter(m => {
+    const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'todos' || m.category.toLowerCase() === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="flex flex-col h-full bg-background-dark">
@@ -179,6 +192,22 @@ const Inventory: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </label>
+        {/* Category filter chips */}
+        <div className="flex gap-2 mt-3 overflow-x-auto no-scrollbar pb-1">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${selectedCategory === cat.id
+                  ? 'bg-primary text-white shadow-lg shadow-primary/30'
+                  : 'bg-card-dark border border-white/5 text-slate-500 hover:text-white'
+                }`}
+            >
+              <span className="material-symbols-outlined text-xs">{cat.icon}</span>
+              {cat.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <main className="flex-1 p-4 space-y-3 pb-32">

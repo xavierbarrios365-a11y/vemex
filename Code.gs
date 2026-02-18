@@ -123,7 +123,10 @@ function doPost(e) {
       case 'registrarMovimiento': result = registrarMovimiento(data); break;
       case 'actualizarEstatusProyecto': result = actualizarEstatusProyecto(data); break;
       case 'agregarNuevoProyecto': result = agregarNuevoProyecto(data); break;
+      case 'eliminarProyecto': result = eliminarProyecto(data); break;
       case 'guardarCotizacion': result = guardarCotizacionCompleta(data); break;
+      case 'actualizarEstatusCotizacion': result = actualizarEstatusCotizacion(data); break;
+      case 'eliminarCotizacion': result = eliminarCotizacion(data); break;
       default: result = { success: false, message: 'Acción desconocida: ' + action };
     }
     return jsonResp(result);
@@ -164,7 +167,22 @@ function getKPIs() {
   var mVals = ss.getSheetByName("BD_MATERIALES").getDataRange().getValues();
   var stockCritico = mVals.slice(1).filter(function(r) { return (Number(r[6]) || 0) <= (Number(r[5]) || 0); }).length;
 
-  return { porCobrar: porCobrar, proyectosActivos: activos, gastosMes: gastosMes, retrasosCriticos: retrasos, stockBajoCount: stockCritico };
+  // Cotizaciones metrics
+  var cotizacionesActivas = 0, valorCotizaciones = 0;
+  try {
+    var cotSheet = ss.getSheetByName("BD_COTIZACIONES");
+    if (cotSheet) {
+      var cotVals = cotSheet.getDataRange().getValues();
+      cotVals.slice(1).forEach(function(r) {
+        if (r[9] === 'Pendiente' || r[9] === 'Aprobada') {
+          cotizacionesActivas++;
+          valorCotizaciones += Number(r[8]) || 0;
+        }
+      });
+    }
+  } catch(e) {}
+
+  return { porCobrar: porCobrar, proyectosActivos: activos, gastosMes: gastosMes, retrasosCriticos: retrasos, stockBajoCount: stockCritico, cotizacionesActivas: cotizacionesActivas, valorCotizaciones: valorCotizaciones };
 }
 
 function getDataMateriales() {
@@ -401,5 +419,68 @@ function agregarNuevoProyecto(data) {
       data.tipo || "METAL"
     ]);
     return { success: true, id: id };
+  });
+}
+
+function eliminarProyecto(data) {
+  var err = validar(data, [
+    { campo: 'id', requerido: true, tipo: 'texto' }
+  ]);
+  if (err) return { success: false, message: err };
+
+  return conLock(function() {
+    var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName("BD_PROYECTOS");
+    var vals = sheet.getDataRange().getValues();
+    for (var i = 1; i < vals.length; i++) {
+      if (vals[i][0].toString() === data.id.toString()) {
+        sheet.deleteRow(i + 1);
+        return { success: true };
+      }
+    }
+    return { success: false, message: 'Proyecto no encontrado' };
+  });
+}
+
+function actualizarEstatusCotizacion(data) {
+  var err = validar(data, [
+    { campo: 'id', requerido: true, tipo: 'texto' },
+    { campo: 'nuevoEstado', requerido: true, tipo: 'texto' }
+  ]);
+  if (err) return { success: false, message: err };
+
+  var estadosValidos = ['Pendiente', 'Aprobada', 'Rechazada', 'Vencida'];
+  if (estadosValidos.indexOf(data.nuevoEstado) === -1) {
+    return { success: false, message: 'Estado no válido. Opciones: ' + estadosValidos.join(', ') };
+  }
+
+  return conLock(function() {
+    var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName("BD_COTIZACIONES");
+    var vals = sheet.getDataRange().getValues();
+    for (var i = 1; i < vals.length; i++) {
+      if (vals[i][0].toString() === data.id.toString()) {
+        sheet.getRange(i + 1, 10).setValue(data.nuevoEstado);
+        return { success: true };
+      }
+    }
+    return { success: false, message: 'Cotización no encontrada' };
+  });
+}
+
+function eliminarCotizacion(data) {
+  var err = validar(data, [
+    { campo: 'id', requerido: true, tipo: 'texto' }
+  ]);
+  if (err) return { success: false, message: err };
+
+  return conLock(function() {
+    var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName("BD_COTIZACIONES");
+    var vals = sheet.getDataRange().getValues();
+    for (var i = 1; i < vals.length; i++) {
+      if (vals[i][0].toString() === data.id.toString()) {
+        sheet.deleteRow(i + 1);
+        return { success: true };
+      }
+    }
+    return { success: false, message: 'Cotización no encontrada' };
   });
 }

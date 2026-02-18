@@ -1,4 +1,5 @@
 import React from 'react';
+import { apiGet, apiPostBody } from '../../constants';
 
 export interface QuoteRecord {
     id: string;
@@ -24,6 +25,8 @@ const statusColors: Record<string, string> = {
     'Vencida': 'text-slate-500 bg-slate-500/10 border-slate-500/20',
 };
 
+const ESTADOS = ['Pendiente', 'Aprobada', 'Rechazada', 'Vencida'];
+
 export const QuoteHistory: React.FC<QuoteHistoryProps> = ({ quotes, loading, onRefresh, onNewQuote }) => {
 
     const formatDate = (dateStr: string) => {
@@ -31,6 +34,56 @@ export const QuoteHistory: React.FC<QuoteHistoryProps> = ({ quotes, loading, onR
             const d = new Date(dateStr);
             return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
         } catch { return dateStr; }
+    };
+
+    const cambiarEstado = async (id: string, nuevoEstado: string) => {
+        // @ts-ignore
+        const gContext = window.google;
+        if (gContext?.script?.run) {
+            gContext.script.run
+                .withSuccessHandler(() => onRefresh())
+                .withFailureHandler(() => alert('Error al cambiar estado'))
+                .actualizarEstatusCotizacion({ id, nuevoEstado });
+        } else {
+            try {
+                const response = await fetch(apiGet(''), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: apiPostBody('actualizarEstatusCotizacion', { id, nuevoEstado }),
+                });
+                const result = await response.json();
+                if (result.success) onRefresh();
+                else alert(result.message || 'Error');
+            } catch {
+                alert('Sin conexión');
+            }
+        }
+    };
+
+    const eliminarCotizacion = async (id: string, nombre: string) => {
+        if (!confirm(`¿Eliminar cotización "${nombre}"?\nEsta acción no se puede deshacer.`)) return;
+
+        // @ts-ignore
+        const gContext = window.google;
+        if (gContext?.script?.run) {
+            gContext.script.run
+                .withSuccessHandler(() => onRefresh())
+                .withFailureHandler(() => alert('Error al eliminar'))
+                .eliminarCotizacion({ id });
+        } else {
+            try {
+                const response = await fetch(apiGet(''), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: apiPostBody('eliminarCotizacion', { id }),
+                });
+                const result = await response.json();
+                if (result.success) onRefresh();
+                else alert(result.message || 'Error');
+            } catch {
+                alert('Sin conexión');
+            }
+        }
     };
 
     return (
@@ -81,19 +134,35 @@ export const QuoteHistory: React.FC<QuoteHistoryProps> = ({ quotes, loading, onR
             {!loading && quotes.map(q => {
                 const stColors = statusColors[q.estado] || statusColors['Pendiente'];
                 return (
-                    <div key={q.id} className="bg-card-dark border border-white/5 p-5 rounded-3xl shadow-xl hover:border-primary/30 transition-all active:scale-[0.98]">
+                    <div key={q.id} className="bg-card-dark border border-white/5 p-5 rounded-3xl shadow-xl hover:border-primary/30 transition-all">
                         <div className="flex justify-between items-start mb-3">
                             <div>
                                 <span className="text-[9px] font-black text-primary uppercase tracking-widest">{q.tipoTrabajo}</span>
                                 <h4 className="font-black text-white italic tracking-tight text-sm">{q.clienteNombre}</h4>
                                 <span className="text-[9px] font-bold text-slate-500">{formatDate(q.fecha)}</span>
                             </div>
-                            <div className={`px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase tracking-widest ${stColors}`}>
-                                {q.estado}
-                            </div>
+                            {/* Status Dropdown */}
+                            <select
+                                value={q.estado}
+                                onChange={(e) => cambiarEstado(q.id, e.target.value)}
+                                className={`px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase tracking-widest bg-transparent cursor-pointer outline-none ${stColors}`}
+                            >
+                                {ESTADOS.map(est => (
+                                    <option key={est} value={est} className="bg-background-dark text-white">{est}</option>
+                                ))}
+                            </select>
                         </div>
                         <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">#{q.id}</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">#{q.id}</span>
+                                <button
+                                    onClick={() => eliminarCotizacion(q.id, q.clienteNombre)}
+                                    className="p-1 rounded-lg text-slate-700 hover:text-danger-red hover:bg-danger-red/10 transition-all"
+                                    title="Eliminar cotización"
+                                >
+                                    <span className="material-symbols-outlined text-sm">delete</span>
+                                </button>
+                            </div>
                             <span className="text-lg font-black text-white font-mono">${q.total.toLocaleString()}<small className="text-[9px] text-slate-500 ml-1">MXN</small></span>
                         </div>
                     </div>

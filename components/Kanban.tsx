@@ -133,6 +133,29 @@ const Kanban: React.FC = () => {
     }
   };
 
+  const eliminarProyecto = async (project: Project) => {
+    if (!confirm(`¿Eliminar "${project.name}"?\nEsta acción no se puede deshacer.`)) return;
+    // @ts-ignore
+    const gContext = window.google;
+    if (gContext && gContext.script && gContext.script.run) {
+      gContext.script.run
+        .withSuccessHandler(() => cargarProyectos())
+        .withFailureHandler(() => setProjects(prev => prev.filter(p => p.id !== project.id)))
+        .eliminarProyecto({ id: project.id });
+    } else {
+      try {
+        await fetch(apiGet(''), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: apiPostBody('eliminarProyecto', { id: project.id }),
+        });
+        cargarProyectos();
+      } catch {
+        setProjects(prev => prev.filter(p => p.id !== project.id));
+      }
+    }
+  };
+
   useEffect(() => {
     cargarProyectos();
   }, []);
@@ -200,6 +223,13 @@ const Kanban: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => eliminarProyecto(p)}
+                        className="size-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-600 hover:text-danger-red hover:bg-danger-red/10 active:scale-90 transition-all"
+                        title="Eliminar proyecto"
+                      >
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                      </button>
                       <span className="text-[9px] font-black text-slate-600 uppercase"># {p.id.slice(-4)}</span>
                       {getSiguienteEstatus(p.status) && (
                         <button

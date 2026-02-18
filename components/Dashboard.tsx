@@ -5,12 +5,14 @@ import { apiGet } from '../constants';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [kpis, setKpis] = useState({
+  const [kpis, setKpis] = useState<any>({
     porCobrar: 0,
     proyectosActivos: 0,
     gastosMes: 0,
     retrasosCriticos: 0,
-    stockBajoCount: 0
+    stockBajoCount: 0,
+    cotizacionesActivas: 0,
+    valorCotizaciones: 0
   });
   const [loading, setLoading] = useState(true);
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -110,6 +112,25 @@ const Dashboard: React.FC = () => {
           <p className="text-3xl font-black text-white tracking-tighter">
             {loading && !isDemoMode ? "..." : `$${(kpis.gastosMes || 0).toLocaleString()}`}
           </p>
+        </div>
+      </section>
+
+      {/* Cotizaciones KPIs */}
+      <section className="grid grid-cols-2 gap-4">
+        <div onClick={() => navigate('/budget')} className="bg-card-dark border-l-4 border-green-500 p-5 rounded-2xl shadow-xl cursor-pointer hover:border-green-400 transition-all active:scale-[0.98]">
+          <p className="text-[10px] font-black text-green-500 uppercase tracking-[0.2em] mb-2 opacity-80 italic">Cotizaciones Activas</p>
+          <p className="text-3xl font-black text-white tracking-tighter">
+            {loading && !isDemoMode ? "..." : kpis.cotizacionesActivas || 0}
+          </p>
+        </div>
+        <div onClick={() => navigate('/budget')} className="bg-card-dark border-l-4 border-purple-500 p-5 rounded-2xl shadow-xl cursor-pointer hover:border-purple-400 transition-all active:scale-[0.98]">
+          <p className="text-[10px] font-black text-purple-500 uppercase tracking-[0.2em] mb-2 opacity-80 italic">Valor Cotizado</p>
+          <div className="flex items-baseline gap-1">
+            <p className="text-2xl font-black text-white tracking-tighter">
+              {loading && !isDemoMode ? "..." : `$${(kpis.valorCotizaciones || 0).toLocaleString()}`}
+            </p>
+            <small className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">mxn</small>
+          </div>
         </div>
       </section>
 
