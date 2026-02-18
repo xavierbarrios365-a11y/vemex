@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { API_URL } from '../constants';
+import { apiGet, apiPostBody } from '../constants';
 
 interface InventoryItem {
   id: string;
@@ -55,7 +55,7 @@ const Inventory: React.FC = () => {
 
     // HTTP fallback
     try {
-      const response = await fetch(`${API_URL}?action=getMateriales`);
+      const response = await fetch(apiGet('getMateriales'));
       const data = await response.json();
       if (Array.isArray(data) && data.length > 0) {
         setMaterials(data);
@@ -109,10 +109,10 @@ const Inventory: React.FC = () => {
     } else {
       // HTTP fallback
       try {
-        await fetch(API_URL, {
+        await fetch(apiGet(''), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, data: formData }),
+          body: apiPostBody(action, formData),
         });
         cargarInventario();
       } catch {
@@ -153,10 +153,10 @@ const Inventory: React.FC = () => {
         .eliminarMaterial({ id: item.id });
     } else {
       try {
-        await fetch(API_URL, {
+        await fetch(apiGet(''), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'eliminarMaterial', data: { id: item.id } }),
+          body: apiPostBody('eliminarMaterial', { id: item.id }),
         });
         cargarInventario();
       } catch {

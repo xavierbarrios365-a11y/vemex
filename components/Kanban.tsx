@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { API_URL } from '../constants';
+import { apiGet, apiPostBody } from '../constants';
 
 interface Project {
   id: string;
@@ -42,7 +42,7 @@ const Kanban: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`${API_URL}?action=getProyectos`);
+      const response = await fetch(apiGet('getProyectos'));
       const data = await response.json();
       if (Array.isArray(data)) setProjects(data);
     } catch {
@@ -69,10 +69,10 @@ const Kanban: React.FC = () => {
         .actualizarEstatusProyecto({ id, nuevoEstatus });
     } else {
       try {
-        await fetch(API_URL, {
+        await fetch(apiGet(''), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'actualizarEstatusProyecto', data: { id, nuevoEstatus } }),
+          body: apiPostBody('actualizarEstatusProyecto', { id, nuevoEstatus }),
         });
         cargarProyectos();
       } catch {
@@ -106,10 +106,10 @@ const Kanban: React.FC = () => {
         .agregarNuevoProyecto(data);
     } else {
       try {
-        const response = await fetch(API_URL, {
+        const response = await fetch(apiGet(''), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'agregarNuevoProyecto', data }),
+          body: apiPostBody('agregarNuevoProyecto', data),
         });
         const result = await response.json();
         if (result.success) {

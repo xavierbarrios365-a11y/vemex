@@ -11,16 +11,24 @@ import {
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { MATERIAL_DATABASE, UniversalMaterial } from '../materialDatabase';
-import { API_URL } from '../constants';
+import { apiGet, apiPostBody } from '../constants';
 
 // Modular Components
 import { StepSelector } from './BudgetCreator/StepSelector';
 import { ConfigPanel } from './BudgetCreator/ConfigPanel';
 import { ResultView } from './BudgetCreator/ResultView';
+import { QuoteHistory, QuoteRecord } from './BudgetCreator/QuoteHistory';
 import { MaterialAssignment, ExtraItem } from './BudgetCreator/types';
 
+type AppView = 'list' | 'create';
+
 const BudgetCreator: React.FC = () => {
-  // ─── STATE ─────────────────────────────────────────────────────
+  // ─── VIEW MODE ─────────────────────────────────────────────────
+  const [view, setView] = useState<AppView>('list');
+  const [quotes, setQuotes] = useState<QuoteRecord[]>([]);
+  const [quotesLoading, setQuotesLoading] = useState(true);
+
+  // ─── CREATE MODE STATE ─────────────────────────────────────────
   const [step, setStep] = useState<'tipo' | 'config' | 'resultado'>('tipo');
   const [tipoTrabajo, setTipoTrabajo] = useState<TipoTrabajo | null>(null);
   const [ancho, setAncho] = useState<number>(0);
@@ -43,6 +51,39 @@ const BudgetCreator: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' | 'none' }>({ text: '', type: 'none' });
 
   const materials: UniversalMaterial[] = useMemo(() => MATERIAL_DATABASE, []);
+
+  // ─── FETCH QUOTES ──────────────────────────────────────────────
+  const fetchQuotes = async () => {
+    setQuotesLoading(true);
+    // @ts-ignore
+    const gContext = window.google;
+    if (gContext?.script?.run) {
+      gContext.script.run
+        .withSuccessHandler((data: any) => {
+          setQuotes(Array.isArray(data) ? data : []);
+          setQuotesLoading(false);
+        })
+        .withFailureHandler(() => {
+          setQuotesLoading(false);
+        })
+        .getCotizaciones();
+      return;
+    }
+
+    try {
+      const response = await fetch(apiGet('getCotizaciones'));
+      const data = await response.json();
+      setQuotes(Array.isArray(data) ? data : []);
+    } catch {
+      // No connection
+    } finally {
+      setQuotesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQuotes();
+  }, []);
 
   // ─── DERIVED STATE ─────────────────────────────────────────────
   const tipoMeta = useMemo(() => CATALOGO_TIPOS.find(t => t.id === tipoTrabajo), [tipoTrabajo]);
@@ -71,6 +112,26 @@ const BudgetCreator: React.FC = () => {
   }, [resultado]);
 
   // ─── LOGIC FUNCTIONS ───────────────────────────────────────────
+  const startNewQuote = () => {
+    setView('create');
+    setStep('tipo');
+    setTipoTrabajo(null);
+    setAncho(0);
+    setAlto(0);
+    setConfig({});
+    setAssignments([]);
+    setExtraItems([]);
+    setStatusMessage({ text: '', type: 'none' });
+    setClienteNombre('');
+    setClienteEmpresa('');
+    setProyectoUbicacion('');
+  };
+
+  const backToList = () => {
+    setView('list');
+    fetchQuotes();
+  };
+
   const selectTipo = (tipo: TipoTrabajo) => {
     setTipoTrabajo(tipo);
     setConfig(getDefaultConfig(tipo));
@@ -112,7 +173,7 @@ const BudgetCreator: React.FC = () => {
   const costoManoObra = Math.round(costoMateriales * manoObraFactor);
   const costoTotal = costoMateriales + costoManoObra;
 
-  // ─── GUARDAR (connected to Code.gs → guardarCotizacionCompleta) ───
+  // ─── GUARDAR ───────────────────────────────────────────────────
   const guardarCotizacion = async () => {
     if (!resultado) {
       setStatusMessage({ text: 'Primero calcula los materiales', type: 'error' });
@@ -120,7 +181,6 @@ const BudgetCreator: React.FC = () => {
     }
     setLoading(true);
 
-    // Build payload matching Code.gs guardarCotizacionCompleta(data) expected shape
     const partidasAutomaticas = resultado.lineas.map((l, idx) => {
       const asignado = assignments[idx];
       const mat = materials.find(m => m.id === asignado?.materialId);
@@ -155,7 +215,6 @@ const BudgetCreator: React.FC = () => {
       partidas: [...partidasAutomaticas, ...partidasExtras],
     };
 
-    // Method 1: Google Apps Script embedded mode (iframe inside Google Sheets)
     // @ts-ignore
     const gContext = window.google;
     if (gContext?.script?.run) {
@@ -175,12 +234,11 @@ const BudgetCreator: React.FC = () => {
       return;
     }
 
-    // Method 2: HTTP fallback (deployed as Web App or running on Vercel)
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch(apiGet(''), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'guardarCotizacion', data }),
+        body: apiPostBody('guardarCotizacion', data),
       });
       const result = await response.json();
       setLoading(false);
@@ -190,19 +248,17 @@ const BudgetCreator: React.FC = () => {
         setStatusMessage({ text: result.message || 'Error del servidor', type: 'error' });
       }
     } catch (err) {
-      // Method 3: Local demo fallback
       setLoading(false);
       setStatusMessage({ text: '✓ Guardado en modo demo (sin conexión a servidor)', type: 'success' });
     }
   };
 
-  // ─── EXPORT PDF ──────────────────────────────────────────────────
+  // ─── EXPORT PDF ────────────────────────────────────────────────
   const exportPDF = () => {
     if (!resultado) return;
     const doc = new jsPDF();
     const vemexBlue: [number, number, number] = [0, 74, 173];
 
-    // --- HEADER ---
     doc.setFillColor(vemexBlue[0], vemexBlue[1], vemexBlue[2]);
     doc.rect(0, 0, 210, 40, 'F');
     doc.setTextColor(255, 255, 255);
@@ -218,7 +274,6 @@ const BudgetCreator: React.FC = () => {
     doc.text(new Date().toLocaleDateString(), 185, 30, { align: 'right' });
     doc.text('Vigencia: 7 días', 185, 36, { align: 'right' });
 
-    // --- CLIENT INFO ---
     doc.setFillColor(245, 245, 245);
     doc.rect(20, 50, 170, 22, 'F');
     doc.setDrawColor(vemexBlue[0], vemexBlue[1], vemexBlue[2]);
@@ -242,7 +297,6 @@ const BudgetCreator: React.FC = () => {
       doc.text(clienteEmpresa, 25, 69);
     }
 
-    // --- TABLE ---
     const tableHeaders = [['CONCEPTO', 'QTY', 'UNIT', 'P.UNIT', 'PARCIAL']];
     const tableData = [
       ...resultado.lineas.map((line, i) => {
@@ -292,7 +346,6 @@ const BudgetCreator: React.FC = () => {
     // @ts-ignore
     const finalY = doc.lastAutoTable.finalY + 10;
 
-    // --- TOTALS ---
     doc.setFontSize(9);
     doc.setTextColor(80, 80, 80);
     doc.text('Subtotal Materiales:', 140, finalY);
@@ -316,7 +369,6 @@ const BudgetCreator: React.FC = () => {
     doc.text('TOTAL:', 140, finalY + 24);
     doc.text(`$${Math.round(totalFinal).toLocaleString()} MXN`, 190, finalY + 24, { align: 'right' });
 
-    // --- FOOTER ---
     const pageH = doc.internal.pageSize.height;
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
@@ -340,31 +392,48 @@ const BudgetCreator: React.FC = () => {
   };
 
   // ─── RENDER ────────────────────────────────────────────────────
+  if (view === 'list') {
+    return (
+      <div className="max-w-2xl mx-auto pb-24 px-4 sm:px-0">
+        <header className="py-8">
+          <h1 className="text-4xl font-black italic tracking-tighter text-white uppercase leading-none">
+            VEMEX <span className="text-primary tracking-normal not-italic opacity-50 text-xl font-medium">BETA</span>
+          </h1>
+          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em] mt-2">Professional Budget Engine v3.0</p>
+        </header>
+        <QuoteHistory
+          quotes={quotes}
+          loading={quotesLoading}
+          onRefresh={fetchQuotes}
+          onNewQuote={startNewQuote}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto pb-24 px-4 sm:px-0">
-      <header className="py-8 text-center sm:text-left flex justify-between items-end">
+      <header className="py-8 flex justify-between items-end">
         <div>
           <h1 className="text-4xl font-black italic tracking-tighter text-white uppercase leading-none">
             VEMEX <span className="text-primary tracking-normal not-italic opacity-50 text-xl font-medium">BETA</span>
           </h1>
           <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em] mt-2">Professional Budget Engine v3.0</p>
         </div>
-        {step !== 'tipo' && (
-          <button
-            onClick={() => setStep(step === 'config' ? 'tipo' : 'config')}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-[9px] font-black uppercase tracking-widest bg-white/5 px-4 py-2 rounded-xl border border-white/5"
-          >
-            <span className="material-symbols-outlined text-sm">arrow_back_ios</span>
-            Volver
-          </button>
-        )}
+        <button
+          onClick={step === 'tipo' ? backToList : () => setStep(step === 'config' ? 'tipo' : 'config')}
+          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-[9px] font-black uppercase tracking-widest bg-white/5 px-4 py-2 rounded-xl border border-white/5"
+        >
+          <span className="material-symbols-outlined text-sm">arrow_back_ios</span>
+          {step === 'tipo' ? 'Mis Ingenierías' : 'Volver'}
+        </button>
       </header>
 
       {/* Status Message */}
       {statusMessage.type !== 'none' && (
         <div className={`mb-4 p-4 rounded-2xl border text-xs font-black uppercase tracking-widest flex items-center gap-3 ${statusMessage.type === 'success'
-            ? 'bg-green-500/10 border-green-500/30 text-green-400'
-            : 'bg-red-500/10 border-red-500/30 text-red-400'
+          ? 'bg-green-500/10 border-green-500/30 text-green-400'
+          : 'bg-red-500/10 border-red-500/30 text-red-400'
           }`}>
           <span className="material-symbols-outlined text-sm">
             {statusMessage.type === 'success' ? 'check_circle' : 'error'}

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { API_URL } from '../constants';
+import { apiGet, apiPostBody } from '../constants';
 
 type TabId = 'operaciones' | 'reportes';
 
@@ -33,11 +33,11 @@ const Finance: React.FC = () => {
     }
 
     try {
-      const resC = await fetch(`${API_URL}?action=getClientes`);
+      const resC = await fetch(apiGet('getClientes'));
       const dataC = await resC.json();
       setClients(Array.isArray(dataC) ? dataC : []);
 
-      const resM = await fetch(`${API_URL}?action=getMovimientos`);
+      const resM = await fetch(apiGet('getMovimientos'));
       const dataM = await resM.json();
       setMovements(Array.isArray(dataM) ? dataM : []);
     } catch {
@@ -74,10 +74,10 @@ const Finance: React.FC = () => {
     } else {
       // HTTP fallback
       try {
-        const response = await fetch(API_URL, {
+        const response = await fetch(apiGet(''), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'registrarMovimiento', data: formData }),
+          body: apiPostBody('registrarMovimiento', formData),
         });
         const result = await response.json();
         if (result.success) {
@@ -110,8 +110,8 @@ const Finance: React.FC = () => {
         <button
           onClick={() => setActiveTab('operaciones')}
           className={`flex-1 py-2 text-xs font-black uppercase rounded-lg tracking-widest transition-all ${activeTab === 'operaciones'
-              ? 'bg-primary text-white shadow-lg'
-              : 'text-slate-500 hover:text-slate-300'
+            ? 'bg-primary text-white shadow-lg'
+            : 'text-slate-500 hover:text-slate-300'
             }`}
         >
           Operaciones
@@ -119,8 +119,8 @@ const Finance: React.FC = () => {
         <button
           onClick={() => setActiveTab('reportes')}
           className={`flex-1 py-2 text-xs font-black uppercase rounded-lg tracking-widest transition-all ${activeTab === 'reportes'
-              ? 'bg-primary text-white shadow-lg'
-              : 'text-slate-500 hover:text-slate-300'
+            ? 'bg-primary text-white shadow-lg'
+            : 'text-slate-500 hover:text-slate-300'
             }`}
         >
           Reportes

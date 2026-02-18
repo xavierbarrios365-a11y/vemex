@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API_URL } from '../constants';
+import { apiGet } from '../constants';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -43,7 +43,7 @@ const Dashboard: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`${API_URL}?action=getKPIs`);
+      const response = await fetch(apiGet('getKPIs'));
       const data = await response.json();
       if (data && !data.error) {
         setKpis(data);
