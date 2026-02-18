@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Custom base styles ─────────────────────────────── */
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #15191d;
+  color: #f1f5f9;
+}
+
+/* ─── Utilities ──────────────────────────────────────── */
+.industrial-grid {
+  background-image: radial-gradient(circle, #2c3135 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
