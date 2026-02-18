@@ -5,9 +5,9 @@ import { API_URL } from '../constants';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [kpis, setKpis] = useState({ 
-    porCobrar: 0, 
-    proyectosActivos: 0, 
+  const [kpis, setKpis] = useState({
+    porCobrar: 0,
+    proyectosActivos: 0,
     gastosMes: 0,
     retrasosCriticos: 0,
     stockBajoCount: 0
@@ -18,10 +18,10 @@ const Dashboard: React.FC = () => {
   const cargarKPIs = async () => {
     setLoading(true);
     setIsDemoMode(false);
-    
+
     // @ts-ignore
     const gContext = window.google;
-    
+
     if (gContext && gContext.script && gContext.script.run) {
       gContext.script.run
         .withSuccessHandler((data: any) => {
@@ -59,15 +59,16 @@ const Dashboard: React.FC = () => {
   };
 
   const setDemoData = () => {
-    setKpis({ 
-      porCobrar: 0, 
-      proyectosActivos: 0, 
-      gastosMes: 0,
-      retrasosCriticos: 0,
-      stockBajoCount: 0
+    setIsDemoMode(true);
+    setKpis({
+      porCobrar: 47500,
+      proyectosActivos: 3,
+      gastosMes: 12800,
+      retrasosCriticos: 1,
+      stockBajoCount: 4
     });
   };
-  
+
   useEffect(() => {
     cargarKPIs();
   }, []);
@@ -129,7 +130,7 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="p-4 space-y-4">
-            <div 
+            <div
               onClick={() => navigate('/projects')}
               className={`flex items-center justify-between group cursor-pointer p-3 hover:bg-white/5 rounded-2xl transition-all ${kpis.retrasosCriticos > 0 ? 'opacity-100' : 'opacity-30'}`}
             >
@@ -146,10 +147,10 @@ const Dashboard: React.FC = () => {
               </div>
               <span className="material-symbols-outlined text-slate-700">chevron_right</span>
             </div>
-            
+
             <div className="h-[1px] bg-white/5 w-full"></div>
-            
-            <div 
+
+            <div
               onClick={() => navigate('/inventory')}
               className={`flex items-center justify-between group cursor-pointer p-3 hover:bg-white/5 rounded-2xl transition-all ${kpis.stockBajoCount > 0 ? 'opacity-100' : 'opacity-30'}`}
             >
@@ -177,7 +178,7 @@ const Dashboard: React.FC = () => {
             { label: 'Clientes', icon: 'person_add', path: '/finance', color: 'primary' },
             { label: 'Gasto', icon: 'payments', path: '/finance', color: 'safety-orange' },
           ].map(action => (
-            <button 
+            <button
               key={action.label}
               onClick={() => navigate(action.path)}
               className="flex flex-col items-center justify-center aspect-square bg-card-dark border border-white/5 rounded-3xl active:scale-90 transition-all hover:border-primary/40 group relative overflow-hidden"

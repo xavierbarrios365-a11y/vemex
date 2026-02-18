@@ -9,13 +9,21 @@
  */
 
 export interface UniversalMaterial {
+    /** Identificador único (ej. ptr-1-cal-14) */
     id: string;
+    /** Nombre comercial corto */
     name: string;
+    /** Clasificación principal para el selector */
     category: 'perfil' | 'tubo' | 'lamina' | 'herraje' | 'consumible';
+    /** Subgrupo funcional */
     subCategory: string;
+    /** Unidad de compra estándar en México */
     unit: 'tramo_6m' | 'pza' | 'm2' | 'kg' | 'lt' | 'paquete';
+    /** Precio base en MXN (Sujeto a cambios por mercado de acero) */
     priceBase: number;
+    /** Texto de ayuda técnica */
     description: string;
+    /** Calibre real si aplica */
     gauge?: string;
 }
 
@@ -104,8 +112,10 @@ const CONSUMABLES: UniversalMaterial[] = [
     { id: 'paint-thinner', name: 'Thinner Estándar (lt)', category: 'consumible', subCategory: 'Pintura', unit: 'lt', priceBase: 65, description: 'Diluyente' },
 
     // Soldadura y Otros
-    { id: 'weld-6013-1/8', name: 'Electrodos 6013 1/8" (kg)', category: 'consumible', subCategory: 'Soldadura', unit: 'kg', priceBase: 125, description: 'Soldadura manual' },
+    { id: 'weld-6013-1/8', name: 'Electrodos 6013 1/8" (kg)', category: 'consumible', subCategory: 'Soldadura', unit: 'kg', priceBase: 125, description: 'Soldadura manual herrería' },
+    { id: 'weld-7018-1/8', name: 'Electrodos 7018 1/8" (kg)', category: 'consumible', subCategory: 'Soldadura', unit: 'kg', priceBase: 165, description: 'Soldadura estructural alta resistencia' },
     { id: 'silicone-clear', name: 'Silicona Transparente Tubo', category: 'consumible', subCategory: 'Selladores', unit: 'pza', priceBase: 95, description: 'Sellado de techos' },
+    { id: 'anchor-3/8', name: 'Taquete Expansión 3/8"', category: 'consumible', subCategory: 'Fijación', unit: 'pza', priceBase: 18, description: 'Anclaje a concreto' },
 ];
 
 const LAMINAS_PLACAS: UniversalMaterial[] = [

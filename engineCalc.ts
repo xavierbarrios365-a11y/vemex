@@ -138,6 +138,9 @@ function pieza(
 }
 
 // ─── CLASIFICADOR DE GRUPO ───────────────────────────────────────
+/**
+ * Clasifica un tipo de trabajo en su grupo funcional correspondiente.
+ */
 export function getGrupo(tipo: TipoTrabajo): GrupoTrabajo {
     switch (tipo) {
         case 'puerta':
@@ -210,12 +213,34 @@ export const CATALOGO_TIPOS: TipoTrabajoMeta[] = [
 // ═════════════════════════════════════════════════════════════════
 //  FUNCIÓN PRINCIPAL — MOTOR UNIVERSAL
 // ═════════════════════════════════════════════════════════════════
+/**
+ * FUNCIÓN PRINCIPAL — MOTOR UNIVERSAL DE CÁLCULO
+ * Realiza el despiece técnico y presupuesto base para trabajos de herrería.
+ * 
+ * @param tipoTrabajo - Identificador único del tipo de obra (puerta, reja, etc.)
+ * @param ancho - Dimensión horizontal de la obra en metros.
+ * @param alto - Dimensión vertical o largo de la obra en metros.
+ * @param config - Parámetros técnicos opcionales (grosores, separaciones).
+ * @returns ResultadoCalculo con lista de materiales, tramos y consumibles.
+ */
 export function calcularMaterialesUniversal(
     tipoTrabajo: TipoTrabajo,
     ancho: number,
     alto: number,
     config: ConfigCalculo = {}
 ): ResultadoCalculo {
+    // 0. VALIDACIÓN DE ENTRADAS (Fail-Safe)
+    if (ancho <= 0 || alto <= 0) {
+        return {
+            grupo: getGrupo(tipoTrabajo),
+            tipoTrabajo,
+            descripcion: 'Dimensiones inválidas (≤ 0)',
+            lineas: [],
+            metrosTotales: 0,
+            tramosTotales: 0,
+            desperdicioAplicado: 0
+        };
+    }
 
     const grupo = getGrupo(tipoTrabajo);
     const DESP = 0.10; // 10% desperdicio general
@@ -519,6 +544,10 @@ export function calcularMaterialesUniversal(
 }
 
 // ─── DEFAULTS DE CONFIG POR TIPO ─────────────────────────────────
+/**
+ * Retorna la configuración de ingeniería por defecto para un tipo de trabajo.
+ * Estos valores aseguran que el motor de cálculo siempre use dimensiones válidas.
+ */
 export function getDefaultConfig(tipo: TipoTrabajo): ConfigCalculo {
     switch (getGrupo(tipo)) {
         case 'cerramientos':
